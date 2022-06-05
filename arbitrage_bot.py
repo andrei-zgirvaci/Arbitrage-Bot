@@ -37,7 +37,7 @@ exchangesData = {
     # },
 }
 
-min_spread = 1
+min_spread = 0
 min_profit = 0
 
 
@@ -93,7 +93,7 @@ def main():
             exchanges, symbol)
         increase_percentage = (bid_price - ask_price) / ask_price * 100
 
-        print("[{0} - {1}] - [{2}] - Price Spread: {3:.4}%".format(ask_exchange_id,
+        print("[{0} - {1}] - [{2}] - Price Spread: {3:.20}%".format(ask_exchange_id,
                                                                    bid_exchange_id, symbol, increase_percentage))
 
         if increase_percentage > max_increase_percentage:
@@ -204,6 +204,8 @@ def get_biggest_spread_by_symbol(exchanges, symbol):
 
         try:
             order_book = exchange.fetch_order_book(symbol)
+            trade = exchange.fetch_trades(symbol, 3000, 1)
+            print(trade[0]['info']['price'])
             bid_price = order_book['bids'][0][0] if len(
                 order_book['bids']) > 0 else None
             ask_price = order_book['asks'][0][0] if len(
