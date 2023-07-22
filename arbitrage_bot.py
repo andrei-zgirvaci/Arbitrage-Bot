@@ -1,58 +1,77 @@
 import time
 import ccxt
-
+import keyboard
+from win10toast import ToastNotifier
+toaster = ToastNotifier()
 
 exchangesData = {
-    "hitbtc": {
+    "bybit": {
         "apiKey": "",
         "secret": "",
         "transactionFee": 0.001
     },
-    "binance": {
-        "apiKey": "",
-        "secret": "",
-        "transactionFee": 0.001
-    },
-    "bittrex": {
-        "apiKey": "",
-        "secret": "",
-        "transactionFee": 0.0025
-    },
-    "poloniex": {
-        "apiKey": "",
-        "secret": "",
-        "transactionFee": 0.0025
-    },
-    "exmo": {
-        "apiKey": "",
-        "secret": "",
-        "transactionFee": 0.002
-    },
+    # "hitbtc": {
+    #     "apiKey": "",
+    #     "secret": "",
+    #     "transactionFee": 0.001
+    # },
+    # "binance": {
+    #     "apiKey": "",
+    #     "secret": "",
+    #     "transactionFee": 0.001
+    # },
+    # "bittrex": {
+    #     "apiKey": "",
+    #     "secret": "",
+    #     "transactionFee": 0.0025
+    # },
+    # "poloniex": {
+    #     "apiKey": "",
+    #     "secret": "",
+    #     "transactionFee": 0.0025
+    # },
+    # "exmo": {
+    #     "apiKey": "",
+    #     "secret": "",
+    #     "transactionFee": 0.002
+    # },
 }
 
-min_spread = 1
+min_spread = 0
 min_profit = 0
 
 
 def main():
     exchanges = [
-        "binance",
-        "bittrex",
-        "hitbtc",
-        "poloniex",
+        "bybit",
+        # "binance",
+        # "bittrex",
+        # "hitbtc",
+        # "poloniex",
         # "exmo",
         # "bitmex",
         # "huobi",
     ]
 
+    # symbols = [
+    #     "ETH/USDT",
+    #     "XRP/USDT",
+    #     "BTC/USDT",
+    #     "BCH/USDT",
+    #     "DASH/USDT",
+    #     "XMR/USDT",
+    #     "LTC/USDT",
+    # ]
+    
+    # define symbols for bybit exchange
     symbols = [
-        "ETH/USDT",
-        "XRP/USDT",
-        # "BTC/USDT",
-        # "BCH/USDT",
-        # "DASH/USDT",
-        # "XMR/USDT",
-        # "LTC/USDT",
+        # "ETH/USDT:USDT",
+        # "XRP/USDT:USDT",
+        "BTC/USDT:USDT",
+        # "BCH/USDT:USDT",
+        # "DASH/USDT:USDT",
+        # "XMR/USDT:USDT",
+        # "LTC/USDT:USDT",
     ]
 
     min_ask_exchange_id = ""
@@ -64,6 +83,7 @@ def main():
     exchange_symbol = ""
     max_increase_percentage = 0.0
 
+
     for symbol in symbols:
         print("-----------------------------")
         print("Searching for the best opportunity for {0} on {1}".format(
@@ -73,7 +93,7 @@ def main():
             exchanges, symbol)
         increase_percentage = (bid_price - ask_price) / ask_price * 100
 
-        print("[{0} - {1}] - [{2}] - Price Spread: {3:.2}%".format(ask_exchange_id,
+        print("[{0} - {1}] - [{2}] - Price Spread: {3:.20}%".format(ask_exchange_id,
                                                                    bid_exchange_id, symbol, increase_percentage))
 
         if increase_percentage > max_increase_percentage:
@@ -153,6 +173,8 @@ def place_buy_sell_order(ask_exchange_id, ask_price, bid_exchange_id, bid_price,
     ask_exchange.secret = exchangesData[ask_exchange_id]["secret"]
     print("Placing a Buy order on {0} for {1} {2} at price: {3}".format(
         ask_exchange_id, amount, symbol.split("/")[0], ask_price))
+    toaster.show_toast("Buying notification", "Placing a Buy order on {0} for {1} {2} at price: {3}".format(
+        ask_exchange_id, amount, symbol.split("/")[0], ask_price))
     # It will cost you a fee if you want to use `create_market_buy_order`
     # ask_exchange.create_market_buy_order(symbol, amount, {'trading_agreement': 'agree'})
     ask_exchange.create_limit_buy_order(symbol, amount, ask_price)
@@ -162,6 +184,8 @@ def place_buy_sell_order(ask_exchange_id, ask_price, bid_exchange_id, bid_price,
     bid_exchange.apiKey = exchangesData[bid_exchange_id]["apiKey"]
     bid_exchange.secret = exchangesData[bid_exchange_id]["secret"]
     print("Placing a Sell order on {0} for {1} {2} at price: {3}".format(
+        bid_exchange_id, amount, symbol.split("/")[0], bid_price))
+    toaster.show_toast("Selling notification", "Placing a Sell order on {0} for {1} {2} at price: {3}".format(
         bid_exchange_id, amount, symbol.split("/")[0], bid_price))
     # It will cost you a fee if you want to use `create_market_buy_order`
     # bid_exchange.create_market_buy_order(symbol, amount, {'trading_agreement': 'agree'})
@@ -180,6 +204,8 @@ def get_biggest_spread_by_symbol(exchanges, symbol):
 
         try:
             order_book = exchange.fetch_order_book(symbol)
+            trade = exchange.fetch_trades(symbol, 3000, 1)
+            print(trade[0]['info']['price'])
             bid_price = order_book['bids'][0][0] if len(
                 order_book['bids']) > 0 else None
             ask_price = order_book['asks'][0][0] if len(
@@ -195,10 +221,10 @@ def get_biggest_spread_by_symbol(exchanges, symbol):
             increase_percentage = (bid_price - ask_price) / ask_price * 100
             if increase_percentage >= 1:
                 return ask_exchange_id, min_ask_price, bid_exchange_id, max_bid_price
-        except:
+        except Exception as err:
             # pass
             print("")
-            print("{0} - There is an error!".format(exchange_id))
+            print("{0} - There is an error!\n{1}".format(exchange_id, err))
 
     min_ask_price += 0.235
     max_bid_price -= 0.235
@@ -218,4 +244,5 @@ def get_exchanges_by_symbol(exchanges, symbol_to_find):
 
 
 if __name__ == "__main__":
-    main()
+    while not keyboard.is_pressed('esc'):
+        main()
